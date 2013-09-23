@@ -1,0 +1,211 @@
+#include <Freeze/Freeze.h>
+#include "DemoMaps.h"
+#include <iostream>
+#include <ctime>
+
+#define CYCLE 1000
+
+using namespace std;
+
+Ice::CommunicatorPtr communicator;
+Freeze::ConnectionPtr connection;
+Ice::Int i;
+
+double diffclock(clock_t clock1,clock_t clock2)
+{
+    double diffticks=clock1-clock2;
+    double diffms=1000*(diffticks)/(CLOCKS_PER_SEC);
+    return diffms;
+}
+
+void WriteReadByteSeqMap() {
+	//Byte Map
+	ByteMap byteMap(connection,"ByteSeqMap");
+	byteMap.clear();
+	Ice::Byte myByte;
+	Demo::ByteSeq byteSeq;
+
+	clock_t start = clock();
+
+	for (i = 0; i < CYCLE; i++)
+	{
+		byteSeq.clear();
+		for (int j = 0; j < 1000; j++)
+		{
+			byteSeq.push_back((Ice::Byte)(i%256));
+		}
+		byteMap.insert(make_pair(i,byteSeq));
+	}
+
+	clock_t end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+
+	ByteMap::iterator p;
+
+	start = clock();
+	for (p = byteMap.begin(); p != byteMap.end(); ++p){
+		Demo::ByteSeq bs = p->second;
+		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
+	}
+
+	end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+
+}
+
+void WriteReadStringSeqMap() {
+	//Byte Map
+	StringMap stringMap(connection,"StringSeqMap");
+	stringMap.clear();
+	string s;
+	Demo::StringSeq stringSeq;
+
+	clock_t start = clock();
+
+	for (i = 0; i < CYCLE; i++)
+	{
+		stringSeq.clear();
+		for (int j = 0; j < 1000; j++)
+		{
+			stringSeq.push_back("aaaa");
+		}
+		stringMap.insert(make_pair(i,stringSeq));
+	}
+
+	clock_t end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+
+	StringMap::iterator p;
+
+	start = clock();
+	for (p = stringMap.begin(); p != stringMap.end(); ++p){
+		Demo::StringSeq ss = p->second;
+		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
+	}
+
+	end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+
+}
+
+void WriteReadFixedMap() {
+	 // Instantiate the byte map.
+    //
+	FixedMap map(connection, "FixedMap");
+    //StringIntMap map(connection, "simple");
+
+    // Clear the map.
+    //
+    map.clear();
+	Ice::Int a,b;
+	Ice::Double c;
+	FixedMap::iterator p;
+	Demo::Fixed fixed;
+    //StringIntMap::iterator p;
+
+	clock_t start = clock();
+
+    // Populate the map.
+    //
+	for (i = 0; i < CYCLE; i++) {
+        //std::string key(1, 'a' + i);
+        //map.insert(i,i);
+		a = (Ice::Int)std::rand() % 1001;
+		b = (Ice::Int)std::rand() % 1001;
+		c = (Ice::Double)((std::rand() % 1000)/1000.0);
+		fixed.i = a;
+		fixed.j = b;
+		fixed.d = c;
+		map.insert(std::make_pair(i,fixed));
+    }
+
+	clock_t end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+
+	//std::cout << "Inizio:" << std::endl;
+	//std::cout << "Indice\tPrimo\tSecondo\tTerzo" << std::endl; 
+
+    // Iterate over the map and change the values.
+    //
+	start = clock();
+    for (p = map.begin(); p != map.end(); ++p)
+		Demo::Fixed f = p->second;
+		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
+
+	end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+}
+
+void WriteReadStringDoubleMap() {
+	//Byte Map
+	StringDoubleMap stringDoubleMap(connection,"StringDoubleMap");
+	stringDoubleMap.clear();
+	Demo::StringDouble stringDouble;
+
+	clock_t start = clock();
+
+	for (i = 0; i < CYCLE; i++)
+	{
+		stringDouble.s="aaaaa";
+		stringDouble.d = (Ice::Double)i;
+		stringDoubleMap.insert(make_pair(i,stringDouble));
+	}
+
+	clock_t end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+
+	StringDoubleMap::iterator p;
+
+	start = clock();
+	for (p = stringDoubleMap.begin(); p != stringDoubleMap.end(); ++p){
+		Demo::StringDouble sd = p->second;
+		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
+	}
+
+	end = clock();
+
+	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+}
+
+int main(int argc, char* argv[])
+{
+    // Initialize the Communicator.
+    //
+    communicator = Ice::initialize(argc, argv);
+
+    // Create a Freeze database connection.
+    //
+	connection = Freeze::createConnection(communicator, "db");
+	
+	cout << "Byte Sequence" << endl;
+	WriteReadByteSeqMap();
+	cout << "String Sequence" << endl;
+	WriteReadStringSeqMap();
+	cout << "String Double" << endl;
+	WriteReadStringDoubleMap();
+	cout << "Fixed" << endl;
+	WriteReadFixedMap();
+
+    //// Find and erase the last element.
+    ////
+    //p = map.find("z");
+    //assert(p != map.end());
+    //map.erase(p);
+
+    // Clean up.
+    //
+    connection->close();
+    communicator->destroy();
+
+	cout << "\nPremi un tasto per uscire...." << endl;
+	getchar();
+
+	return 0;
+}
