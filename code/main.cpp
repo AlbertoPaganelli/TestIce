@@ -1,16 +1,55 @@
+/***************************************************************************
+
+ begin : Sep 23 2013
+
+ copyright : (C) 2001 Alberto Paganelli
+
+ email : 61825@studenti.unimore.it
+
+ ***************************************************************************/
+
+/***************************************************************************
+
+ * *
+
+ * This program is free software for non commercial purpose *
+
+ * and for public research institutes; you can redistribute it and/or *
+
+ * modify it under the terms of the GNU General Public License. *
+
+ * For commercial purpose see appropriate license terms *
+
+ * *
+
+ ***************************************************************************/
+
 #include <Freeze/Freeze.h>
 #include "DemoMaps.h"
 #include <iostream>
 #include <ctime>
+#include "mac_clock_gettime.h"
 
 #define CYCLE 1000
 
 using namespace std;
 
+/// A Ice communicator
 Ice::CommunicatorPtr communicator;
+
+/// A Connection with a BDB database
 Freeze::ConnectionPtr connection;
+
+/// A utility variable
 Ice::Int i;
 
+/// The struct used to get the time
+struct timespec start, stop;
+
+/// Returns the difference between two times.
+/// \param[in] clock1 The stop time.
+/// \param[in] clock2 The start time.
+/// \return the difference between the two times
 double diffclock(clock_t clock1,clock_t clock2)
 {
     double diffticks=clock1-clock2;
@@ -18,42 +57,51 @@ double diffclock(clock_t clock1,clock_t clock2)
     return diffms;
 }
 
+/// Write and read on BDB a ByteSeqMap
 void WriteReadByteSeqMap() {
 	//Byte Map
 	ByteMap byteMap(connection,"ByteSeqMap");
 	byteMap.clear();
 	Demo::ByteSeq byteSeq;
 
-	clock_t start = clock();
+	byteSeq.clear();
+	for (int j = 0; j < Demo::ByteSeqSize; j++)
+	{
+		byteSeq.push_back((Ice::Byte)(i%256));
+	}
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
 
 	for (i = 0; i < CYCLE; i++)
 	{
-		byteSeq.clear();
-		for (int j = 0; j < Demo::ByteSeqSize; j++)
-		{
-			byteSeq.push_back((Ice::Byte)(i%256));
-		}
 		byteMap.insert(make_pair(i,byteSeq));
 	}
 
-	clock_t end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	//std::cout << diffclock(end,begin)/CYCLE << " ms/write" << std::endl;
+	cout << (float) ((Demo::ByteSeqSize * CYCLE)/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
 	ByteMap::iterator p;
 
-	start = clock();
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
 	for (p = byteMap.begin(); p != byteMap.end(); ++p){
 		Demo::ByteSeq bs = p->second;
 		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
 	}
 
-	end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	//std::cout << diffclock(end,begin)/CYCLE << " ms/read" << std::endl;
+	cout << (float) ((Demo::ByteSeqSize * CYCLE)/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
 }
 
+/// Write and read on BDB a StringSeqMap
 void WriteReadStringSeqMap() {
 	//Byte Map
 	StringMap stringMap(connection,"StringSeqMap");
@@ -61,36 +109,43 @@ void WriteReadStringSeqMap() {
 	string s;
 	Demo::StringSeq stringSeq;
 
-	clock_t start = clock();
+	stringSeq.clear();
+	for (int j = 0; j < Demo::StringSeqSize; j++)
+	{
+		stringSeq.push_back("aaaa");
+	}
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	for (i = 0; i < CYCLE; i++)
 	{
-		stringSeq.clear();
-		for (int j = 0; j < Demo::StringSeqSize; j++)
-		{
-			stringSeq.push_back("aaaa");
-		}
 		stringMap.insert(make_pair(i,stringSeq));
 	}
 
-	clock_t end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	//std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	cout << (float) ((Demo::StringSeqSize * CYCLE * 4)/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
 	StringMap::iterator p;
 
-	start = clock();
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
 	for (p = stringMap.begin(); p != stringMap.end(); ++p){
 		Demo::StringSeq ss = p->second;
 		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
 	}
 
-	end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	//std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	cout << (float) ((Demo::StringSeqSize * CYCLE * 4)/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
 }
 
+/// Write and read on BDB a FixedMap
 void WriteReadFixedMap() {
 	 // Instantiate the byte map.
     //
@@ -106,71 +161,79 @@ void WriteReadFixedMap() {
 	Demo::Fixed fixed;
     //StringIntMap::iterator p;
 
-	clock_t start = clock();
+	a = (Ice::Int)std::rand() % 1001;
+	b = (Ice::Int)std::rand() % 1001;
+	c = (Ice::Double)((std::rand() % 1000)/1000.0);
+	fixed.i = a;
+	fixed.j = b;
+	fixed.d = c;
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
     // Populate the map.
     //
 	for (i = 0; i < CYCLE; i++) {
-        //std::string key(1, 'a' + i);
-        //map.insert(i,i);
-		a = (Ice::Int)std::rand() % 1001;
-		b = (Ice::Int)std::rand() % 1001;
-		c = (Ice::Double)((std::rand() % 1000)/1000.0);
-		fixed.i = a;
-		fixed.j = b;
-		fixed.d = c;
 		map.insert(std::make_pair(i,fixed));
     }
 
-	clock_t end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
-
-	//std::cout << "Inizio:" << std::endl;
-	//std::cout << "Indice\tPrimo\tSecondo\tTerzo" << std::endl; 
+	//std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	cout << (float) ((CYCLE * (2*sizeof(Ice::Int) + sizeof(Ice::Double)))/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
     // Iterate over the map and change the values.
     //
-	start = clock();
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
     for (p = map.begin(); p != map.end(); ++p)
 		Demo::Fixed f = p->second;
 		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
 
-	end = clock();
+    clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	//std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+    cout << (float) ((CYCLE * (2*sizeof(Ice::Int) + sizeof(Ice::Double)))/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+    cout << timediff(start, stop) << endl;
 }
 
+/// Write and read on BDB a StringDoubleMap
 void WriteReadStringDoubleMap() {
 	//Byte Map
 	StringDoubleMap stringDoubleMap(connection,"StringDoubleMap");
 	stringDoubleMap.clear();
 	Demo::StringDouble stringDouble;
 
-	clock_t start = clock();
+	stringDouble.s="aaaaa";
+	stringDouble.d = (Ice::Double)1.0;
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	for (i = 0; i < CYCLE; i++)
 	{
-		stringDouble.s="aaaaa";
-		stringDouble.d = (Ice::Double)i;
 		stringDoubleMap.insert(make_pair(i,stringDouble));
 	}
 
-	clock_t end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	//std::cout << diffclock(end,start)/CYCLE << " ms/write" << std::endl;
+	cout << (float) ((CYCLE * (5 + sizeof(Ice::Double)))/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 
 	StringDoubleMap::iterator p;
 
-	start = clock();
+	clock_gettime(CLOCK_MONOTONIC, &start);
+
 	for (p = stringDoubleMap.begin(); p != stringDoubleMap.end(); ++p){
 		Demo::StringDouble sd = p->second;
 		//std::cout << p->first << "\t" << p->second.i << "\t" << p->second.j << "\t" << p->second.d << "\t" << std::endl;
 	}
 
-	end = clock();
+	clock_gettime(CLOCK_MONOTONIC, &stop);
 
-	std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	//std::cout << diffclock(end,start)/CYCLE << " ms/read" << std::endl;
+	cout << (float) ((CYCLE * (5 + sizeof(Ice::Double)))/timediff(start, stop)) / 1000000 << " MB/s" << endl;
+	cout << timediff(start, stop) << endl;
 }
 
 int main(int argc, char* argv[])
